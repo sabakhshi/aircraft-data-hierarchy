@@ -115,7 +115,7 @@ class OffDesignPoint(CommonBaseModel):
     parameters: dict = Field(..., description="The parameter values for the off-design point.")
 
 
-class FlightConditions(CommonBaseModel):
+class FlightConditions(EngineElement):
     """
     Flight conditions for the engine.
 
@@ -129,8 +129,9 @@ class FlightConditions(CommonBaseModel):
         Temperature deviation in degrees Rankine.
     """
 
-    mn: Optional[float] = Field(None, description="Mach number")
-    alt: Optional[float] = Field(None, description="Altitude in feet")
+    mn: Optional[List[float]] = Field(None, description="Mach number")
+    alt: Optional[List[float]] = Field(None, description="Altitude in feet")
+    mnalt: Optional[dict] = Field(None, description="Altitude-Mach number pairs")
     d_ts: Optional[float] = Field(None, description="Temperature deviation in degrees Rankine")
 
 
@@ -282,6 +283,21 @@ class Shaft(EngineElement):
     num_ports: Optional[int] = Field(None, description="Number of ports on the shaft")
     nmech: Optional[float] = Field(None, description="Mechanical speed in RPM")
 
+class BleedOut(EngineElement):
+    """
+    Bleed output component
+
+    Attributes
+    ----------
+    bleed_names : Optional[List[str]]
+        Names of the bleed connections associated
+    statics : Optional[bool]
+        If true calculate static properties
+    """
+
+    bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed connections associated")
+    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
 
 class Performance(EngineElement):
     """
@@ -336,7 +352,7 @@ class PropulsionCycle(CommonBaseModel):
         thermo_method (str, optional): The thermodynamic method used in the engine cycle. Defaults to 'CEA'.
         thermo_data (str, optional): The thermodynamic data used in the engine cycle.
         elements (List[EngineElement]): The list of engine elements in the engine cycle.
-        flow_stations (List[FlowStation]): The list of flow stations in the engine cycle.
+        flow_stations (List[FlowStation], optional): The list of flow stations in the engine cycle.
         balance_components (List[BalanceComponent], optional): The list of balance components in the engine cycle.
         global_connections (dict, optional): The global connections in the engine cycle.
         solver_settings (dict, optional): The solver settings for the engine cycle.
@@ -347,7 +363,6 @@ class PropulsionCycle(CommonBaseModel):
     thermo_method: str = Field("CEA", description="The thermodynamic method used in the engine cycle.")
     thermo_data: Optional[str] = Field(None, description="The thermodynamic data used in the engine cycle.")
     elements: List[EngineElement] = Field(..., description="The list of engine elements in the engine cycle.")
-    flow_stations: List[FlowStation] = Field(..., description="The list of flow stations in the engine cycle.")
     balance_components: Optional[List[BalanceComponent]] = Field(
         None, description="The list of balance components in the engine cycle."
     )

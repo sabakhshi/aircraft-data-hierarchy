@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 from ...common_base_model import CommonBaseModel, Metadata
 from ...requirements import Requirement
 from ...performance import Discipline
-from ...behavior import Behavior
+from ...behavior import Behavior, DAVEfunc
 from .propulsion_cycle import PropulsionCycle
 
 
@@ -45,6 +45,7 @@ class Propulsion(CommonBaseModel):
     behavior: Optional[List[Behavior]] = Field(
         default=None, description="Specific behaviors for the propulsion system."
     )
+    temp_behavior: Optional[DAVEfunc] = Field( default=None, description="temporary until I can talk to Ron")
 
     @field_validator("name", "description", mode="before")
     @classmethod
