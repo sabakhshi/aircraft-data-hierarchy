@@ -3,48 +3,6 @@ from pydantic import Field, field_validator
 from ...common_base_model import CommonBaseModel
 
 
-class FlowStation(CommonBaseModel):
-    """
-    Represents a flow station in the engine cycle.
-
-    Attributes:
-        name (str): The name of the flow station.
-        components (List[str]): The list of components associated with the flow station.
-    """
-
-    name: str = Field(..., description="The name of the flow station.")
-    components: List[str] = Field(..., description="The list of components associated with the flow station.")
-
-
-class ShaftConnection(CommonBaseModel):
-    """
-    Represents a connection between an engine element and a shaft.
-
-    Attributes:
-        shaft_name (str): The name of the shaft.
-        port_name (str): The name of the port on the engine element connected to the shaft.
-    """
-
-    shaft_name: str = Field(..., description="The name of the shaft.")
-    port_name: str = Field(..., description="The name of the port on the engine element connected to the shaft.")
-
-
-class Bleed(CommonBaseModel):
-    """
-    Represents a bleed flow connection.
-
-    Attributes:
-        bleed_name (str): The name of the bleed flow.
-        flow_source (str): The source of the bleed flow.
-        flow_target (str): The target of the bleed flow.
-        connect_stat (bool, optional): Whether to connect static properties. Defaults to True.
-    """
-
-    bleed_name: str = Field(..., description="The name of the bleed flow.")
-    flow_source: str = Field(..., description="The source of the bleed flow.")
-    flow_target: str = Field(..., description="The target of the bleed flow.")
-    connect_stat: bool = Field(True, description="Whether to connect static properties.")
-
 
 class BalanceComponent(CommonBaseModel):
     """
@@ -88,18 +46,41 @@ class EngineElement(CommonBaseModel):
     Attributes:
         name (str): The name of the engine element.
         options (dict, optional): The options associated with the engine element.
-        bleeds (List[Bleed], optional): The list of bleed flow connections associated with the engine element.
-        shafts (List[ShaftConnection], optional): The list of shaft connections associated with the engine element.
     """
 
     name: str = Field(..., description="The name of the engine element.")
     options: Optional[dict] = Field(None, description="The options associated with the engine element.")
-    bleeds: Optional[List[Bleed]] = Field(
-        None, description="The list of bleed flow connections associated with the engine element."
-    )
-    shafts: Optional[List[ShaftConnection]] = Field(
-        None, description="The list of shaft connections associated with the engine element."
-    )
+
+class Shaft(EngineElement):
+    """
+    Shaft component of the engine.
+
+    Attributes
+    ----------
+    num_ports : Optional[int]
+        Number of ports on the shaft.
+    nmech : Optional[float]
+        Mechanical speed in RPM.
+    """
+
+    num_ports: Optional[int] = Field(None, description="Number of ports on the shaft")
+    nmech: Optional[float] = Field(None, description="Mechanical speed in RPM")
+
+class Bleed(EngineElement):
+    """
+    Bleed output component
+
+    Attributes
+    ----------
+    bleed_names : Optional[List[str]]
+        Names of the bleed connections associated
+    statics : Optional[bool]
+        If true calculate static properties
+    """
+
+    bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed connections associated")
+    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
 
 
 class OffDesignPoint(CommonBaseModel):
@@ -131,7 +112,6 @@ class FlightConditions(EngineElement):
 
     mn: Optional[List[float]] = Field(None, description="Mach number")
     alt: Optional[List[float]] = Field(None, description="Altitude in feet")
-    mnalt: Optional[dict] = Field(None, description="Altitude-Mach number pairs")
     d_ts: Optional[float] = Field(None, description="Temperature deviation in degrees Rankine")
 
 
@@ -165,12 +145,18 @@ class Compressor(EngineElement):
         Names of the bleed ports.
     map_extrap : Optional[bool]
         Flag to indicate if map extrapolation is used.
+    pr_des : Optional[float]
+        Design condition pressure ratio
+    effDes : Optional[float]
+        Design condition efficeincy
     """
 
     mn: Optional[float] = Field(None, description="Mach number")
     map_data: Optional[str] = Field(None, description="Map data for the compressor")
     bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
     map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
+    pr_des : Optional[float] = Field(None, description="Design condition pressure ratio")
+    eff_des : Optional[float] = Field(None, description="Design condition efficeincy")
 
 
 class Splitter(EngineElement):
@@ -241,12 +227,18 @@ class Turbine(EngineElement):
         Names of the bleed ports.
     map_extrap : Optional[bool]
         Flag to indicate if map extrapolation is used.
+    pr_des : Optional[float]
+        Design condition pressure ratio
+    effDes : Optional[float]
+        Design condition efficeincy
     """
 
     mn: Optional[float] = Field(None, description="Mach number")
     map_data: Optional[str] = Field(None, description="Map data for the turbine")
     bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
     map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
+    pr_des : Optional[float] = Field(None, description="Design condition pressure ratio")
+    eff_des : Optional[float] = Field(None, description="Design condition efficeincy")
 
 
 class Nozzle(EngineElement):
@@ -268,35 +260,7 @@ class Nozzle(EngineElement):
     cv: Optional[float] = Field(None, description="Discharge coefficient")
 
 
-class Shaft(EngineElement):
-    """
-    Shaft component of the engine.
 
-    Attributes
-    ----------
-    num_ports : Optional[int]
-        Number of ports on the shaft.
-    nmech : Optional[float]
-        Mechanical speed in RPM.
-    """
-
-    num_ports: Optional[int] = Field(None, description="Number of ports on the shaft")
-    nmech: Optional[float] = Field(None, description="Mechanical speed in RPM")
-
-class BleedOut(EngineElement):
-    """
-    Bleed output component
-
-    Attributes
-    ----------
-    bleed_names : Optional[List[str]]
-        Names of the bleed connections associated
-    statics : Optional[bool]
-        If true calculate static properties
-    """
-
-    bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed connections associated")
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
 
 
 class Performance(EngineElement):
@@ -352,9 +316,9 @@ class PropulsionCycle(CommonBaseModel):
         thermo_method (str, optional): The thermodynamic method used in the engine cycle. Defaults to 'CEA'.
         thermo_data (str, optional): The thermodynamic data used in the engine cycle.
         elements (List[EngineElement]): The list of engine elements in the engine cycle.
-        flow_stations (List[FlowStation], optional): The list of flow stations in the engine cycle.
         balance_components (List[BalanceComponent], optional): The list of balance components in the engine cycle.
         global_connections (dict, optional): The global connections in the engine cycle.
+        flow_connections (dict, optional): The flow connections in the engine cycle.
         solver_settings (dict, optional): The solver settings for the engine cycle.
     """
 
@@ -367,6 +331,7 @@ class PropulsionCycle(CommonBaseModel):
         None, description="The list of balance components in the engine cycle."
     )
     global_connections: Optional[dict] = Field(None, description="The global connections in the engine cycle.")
+    flow_connections: Optional[dict] = Field(None, description="The flow connections in the engine cycle.")
     solver_settings: Optional[dict] = Field(None, description="The solver settings for the engine cycle.")
 
     @field_validator("thermo_method")
