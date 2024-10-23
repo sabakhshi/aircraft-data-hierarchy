@@ -126,7 +126,8 @@ class Inlet(EngineElement):
     ram_recovery : Optional[float]
         Ram recovery factor.
     """
-
+    
+    statics : Optional[bool] = Field(None, description="If true calculate static properties")
     mn: Optional[float] = Field(None, description="Mach number")
     ram_recovery: Optional[float] = Field(None, description="Ram recovery factor")
 
@@ -324,8 +325,10 @@ class PropulsionCycle(CommonBaseModel):
 
     name: str = Field(..., description="The name of the engine cycle.")
     design: bool = Field(..., description="Whether the engine cycle is in design mode.")
-    thermo_method: str = Field("CEA", description="The thermodynamic method used in the engine cycle.")
+    thermo_method: str = Field("TABULAR", description="The thermodynamic method used in the engine cycle.")
     thermo_data: Optional[str] = Field(None, description="The thermodynamic data used in the engine cycle.")
+    throttle_mode: str = Field("T4", description="What quanity should be used to throttle engine for off-design cases.")
+    fuel_type: str = Field("FAR", description="Type of fueld considered for the cycle.")
     elements: List[EngineElement] = Field(..., description="The list of engine elements in the engine cycle.")
     balance_components: Optional[List[BalanceComponent]] = Field(
         None, description="The list of balance components in the engine cycle."
@@ -339,6 +342,20 @@ class PropulsionCycle(CommonBaseModel):
         allowed_methods = ["CEA", "TABULAR"]
         if v not in allowed_methods:
             raise ValueError(f"Thermodynamic method must be one of {allowed_methods}")
+        return v
+    
+    @field_validator("throttle_mode")
+    def validate_throttle_mode(cls, v):
+        allowed_methods = ["T4", "percent_throttle"]
+        if v not in allowed_methods:
+            raise ValueError(f"Throttle mode must be one of {allowed_methods}")
+        return v
+    
+    @field_validator("fuel_type")
+    def validate_fuel_type(cls, v):
+        allowed_types = ["FAR", "Jet-A(g)"]
+        if v not in allowed_types:
+            raise ValueError(f"Fuel type must be one of {allowed_types}")
         return v
 
 
