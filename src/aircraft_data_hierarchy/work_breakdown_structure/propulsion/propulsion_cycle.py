@@ -65,6 +65,7 @@ class Shaft(EngineElement):
 
     num_ports: Optional[int] = Field(None, description="Number of ports on the shaft")
     nmech: Optional[float] = Field(None, description="Mechanical speed in RPM")
+    nmech_type: Optional[str] = Field(None, description="Low or high pressure shaft")
 
 class Bleed(EngineElement):
     """
