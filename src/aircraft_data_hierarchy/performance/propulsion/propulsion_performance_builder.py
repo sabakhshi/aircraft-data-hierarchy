@@ -30,7 +30,7 @@ class PropulsionPerformanceBuilder():
     def getCycleInfo(self):
         cycle = self.ADHInstance.cycle
         cycleInfo = {
-            "name" : element.name,
+            "name" : cycle.name,
             "isDesign": cycle.design, 
             "thermo_method" : cycle.thermo_method, 
             "thermo_data": cycle.thermo_data, 
@@ -103,24 +103,124 @@ class PropulsionPerformanceBuilder():
 
     def getCompressor(self):
         engineElements = self.ADHInstance.cycle.elements
+        compressors = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Compressor):
+                compData = {
+                    "name" : element.name,
+                    "statics" : element.statics, 
+                    "map_data" : element.map_data, 
+                    "map_extrap": element.map_extrap, 
+                    "map_interp_method" : element.map_interp_method,
+                    "alpha_map" : element.alpha_map,
+                    "bleed_names": element.bleed_names,
+                    "pr_des": element.pr_des,
+                    "eff_des": element.eff_des,
+                    "area" : element.area,
+                    "mn" : element.mn
+                }
+                compressors.append(compData)
+        return compressors
 
     def getCombustor(self):
         engineElements = self.ADHInstance.cycle.elements
+        combustors = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Combustor):
+                combData = {
+                    "name" : element.name,
+                    "statics" : element.statics, 
+                    "dp_qp" : element.dp_qp, 
+                    "FAR" : element.FAR, 
+                    "area" : element.area,
+                    "mn" : element.mn
+                }
+                combustors.append(combData)
+        return combustors
 
     def getTurbine(self):
         engineElements = self.ADHInstance.cycle.elements
+        turbines = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Turbine):
+                turbData = {
+                    "name" : element.name,
+                    "statics" : element.statics, 
+                    "map_data" : element.map_data, 
+                    "map_extrap": element.map_extrap, 
+                    "map_interp_method" : element.map_interp_method,
+                    "alpha_map" : element.alpha_map,
+                    "pr_des": element.pr_des,
+                    "eff_des": element.eff_des,
+                    "bleed_names": element.bleed_names,
+                    "area" : element.area,
+                    "mn" : element.mn
+                }
+                turbines.append(turbData)
+        return turbines
 
     def getNozzle(self):
         engineElements = self.ADHInstance.cycle.elements
+        nozzles = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Nozzle):
+                nozzData = {
+                    "name" : element.name,
+                    "statics" : element.statics, 
+                    "nozzType" : element.nozz_type,
+                    "lossCoef": element.loss_coef,
+                    "cv": element.cv,
+                    "area" : element.area,
+                    "mn" : element.mn
+                }
+                nozzles.append(nozzData)
+        return nozzles
 
     def getShaft(self):
         engineElements = self.ADHInstance.cycle.elements
+        shafts = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Shaft):
+                shaftData = {
+                    "name" : element.name,
+                    "num_ports" : element.num_ports, 
+                    "nmech" : element.nmech,
+                }
+                shafts.append(shaftData)
+        return shafts
 
     def getBleed(self):
         engineElements = self.ADHInstance.cycle.elements
+        bleeds = []
+        for element in engineElements:
+            if utils.lenient_isinstance(element, Bleed):
+                bleedData = {
+                    "name" : element.name,
+                    "statics" : element.statics, 
+                    "bleed_names" : element.bleed_names, 
+                }
+                bleeds.append(bleedData)
+        return bleeds
 
     def getBalance(self):
-        engineElements = self.ADHInstance.cycle.elements
+        balanceComps = self.ADHInstance.cycle.balance_components
+        balances = []
+        for comp in balanceComps:
+            if utils.lenient_isinstance(comp, BalanceComponent):
+                balanceData = {
+                    "name" : comp.balance_name,
+                    "units" : comp.units, 
+                    "eq_units" : comp.eq_units, 
+                    "lower" : comp.lower, 
+                    "upper" : comp.upper, 
+                    "lhs_name" : comp.lhs_name,
+                    "rhs_name" : comp.rhs_name,
+                    "rhs_val" : comp.rhs_val,
+                    "mult_val" : comp.mult_val,
+                    "use_mult" : comp.use_mult
+                }
+                balances.append(balanceData)
+        return balances
 
         
 
@@ -131,6 +231,23 @@ class PropulsionPerformanceBuilder():
 
         #Get flight conds
         fc = self.getFlightConds()
+
+        #HBTF data
+
+        inlets = self.getInlet()
+        splitter = self.getSplitter()
+        duct = self.getDuct()
+        comp = self.getCompressor()
+        comb = self.getCombustor()
+        turb = self.getTurbine()
+        nozz = self.getNozzle()
+
+        shaft = self.getShaft()
+        bleeds = self.getBleed()
+
+        balance = self.getBalance()
+
+
 
 
         return 
