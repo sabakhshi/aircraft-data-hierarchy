@@ -73,7 +73,8 @@ class HBTFBuilder(pyc.Cycle):
 
     def add_balances(self,balanceComp,balances):
         for bal in balances:
-            balanceComp.add_balance(bal.balance_name, units=bal.units)
+            balanceComp.add_balance(bal.balance_name, units=bal.units, eq_units=bal.eq_units,
+                                    lower=bal.lower,upper=bal.upper,val=bal.val,use_mult=bal.mult_val)
 
 
     #Connections
@@ -134,7 +135,6 @@ class HBTFBuilder(pyc.Cycle):
 
 
         self.connect_compturb_to_shafts(cycleData["comp"],cycleData["shafts"])
-
         #Ideally expanding flow by conneting flight condition static pressure to nozzle exhaust pressure
         self.connect_nozz_to_fc(cycleData["nozz"], cycleData["fc"])
 
@@ -155,31 +155,32 @@ class HBTFBuilder(pyc.Cycle):
 
         if cycleData["balances"] is not None:
             balance = self.add_subsystem('balance', om.BalanceComp())
+            self.add_balances(self,balance,cycleData.balances)
 
 
 
         
         if design:
-            balance.add_balance('W', units='lbm/s', eq_units='lbf')
+            #balance.add_balance('W', units='lbm/s', eq_units='lbf')
             #Here balance.W is implicit state variable that is the OUTPUT of balance object
             self.connect('balance.W', 'fc.W') #Connect the output of balance to the relevant input
             self.connect('perf.Fn', 'balance.lhs:W')       #This statement makes perf.Fn the LHS of the balance eqn.
             self.promotes('balance', inputs=[('rhs:W', 'Fn_DES')])
 
-            balance.add_balance('FAR', eq_units='degR', lower=1e-4, val=.017)
+            #balance.add_balance('FAR', eq_units='degR', lower=1e-4, val=.017)
             self.connect('balance.FAR', 'burner.Fl_I:FAR')
             self.connect('burner.Fl_O:tot:T', 'balance.lhs:FAR')
             self.promotes('balance', inputs=[('rhs:FAR', 'T4_MAX')])
             
             # Note that for the following two balances the mult val is set to -1 so that the NET torque is zero
-            balance.add_balance('lpt_PR', val=1.5, lower=1.001, upper=8,
-                                eq_units='hp', use_mult=True, mult_val=-1)
+            #balance.add_balance('lpt_PR', val=1.5, lower=1.001, upper=8,
+                                #eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.lpt_PR', 'lpt.PR')
             self.connect('lp_shaft.pwr_in_real', 'balance.lhs:lpt_PR')
             self.connect('lp_shaft.pwr_out_real', 'balance.rhs:lpt_PR')
 
-            balance.add_balance('hpt_PR', val=1.5, lower=1.001, upper=8,
-                                eq_units='hp', use_mult=True, mult_val=-1)
+            #balance.add_balance('hpt_PR', val=1.5, lower=1.001, upper=8,
+                                #eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.hpt_PR', 'hpt.PR')
             self.connect('hp_shaft.pwr_in_real', 'balance.lhs:hpt_PR')
             self.connect('hp_shaft.pwr_out_real', 'balance.rhs:hpt_PR')

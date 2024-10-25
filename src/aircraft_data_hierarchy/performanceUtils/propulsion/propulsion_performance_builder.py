@@ -32,9 +32,7 @@ class PropulsionPerformanceBuilder():
         if type == "HBTF":
             cycleData = {
                 "cycleInfo" : bu.getCycleInfo(self.ADHInstance),
-
                 "fc" : bu.getFlightConds(self.ADHInstance),
-
                 "inlets" : bu.getInlet(self.ADHInstance),
                 "splitters" : bu.getSplitter(self.ADHInstance),
                 "duct" : bu.getDuct(self.ADHInstance),
@@ -42,7 +40,6 @@ class PropulsionPerformanceBuilder():
                 "comb" : bu.getCombustor(self.ADHInstance),
                 "turb" : bu.getTurbine(self.ADHInstance),
                 "nozz" : bu.getNozzle(self.ADHInstance),
-
                 "shafts" : bu.getShaft(self.ADHInstance),
                 "bleeds" : bu.getBleed(self.ADHInstance),
                 "balance" : bu.getBalance(self.ADHInstance)
@@ -67,10 +64,6 @@ class pyCycleBuilder(PropulsionPerformanceBuilder):
     
     def getOutput(self):
         
-
-
-
-
 
         return 
     
