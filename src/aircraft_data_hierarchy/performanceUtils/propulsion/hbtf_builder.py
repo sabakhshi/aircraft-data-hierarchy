@@ -71,18 +71,27 @@ class HBTFBuilder(pyc.Cycle):
 
     #Balances
 
-    def add_balances(self,balanceComp,balances):
+    def add_balances(self,balanceComp,balances,design):
         for bal in balances:
-            balanceComp.add_balance(bal.balance_name, units=bal.units, eq_units=bal.eq_units,
-                                    lower=bal.lower,upper=bal.upper,val=bal.val,use_mult=bal.mult_val)
+            if bal.on_design == design:
+                balanceComp.add_balance(bal.balance_name, units=bal.units, eq_units=bal.eq_units,
+                                        lower=bal.lower,upper=bal.upper,val=bal.val,use_mult=bal.mult_val)
+
+
+    #Flow Connections
+    def connect_flow(flow_connections):
+        for fc in flow_connections:
+            self.connect("{}.Fl_O".format(flow_connections[0]),"{}.Fl_I".format(flow_connections[1]))
+
 
 
     #Connections
 
-    def connect_compturb_to_shafts(self, compturb, shafts):
+    def connect_compturb_to_shafts(self, compturb, shafts, gc):
         for shaft in shafts:
             for i, comp in enumerate(compturb):
-                self.connect('{}.trq'.format(comp["name"]),'{}.trq_{}'.format(shaft["name"],str(i)))
+                if "{},{}".format(comp["name"],shaft["name"]) in gc:
+                    self.connect('{}.trq'.format(comp["name"]),'{}.trq_{}'.format(shaft["name"],str(i)))
 
 
     def connect_nozz_to_fc(self, nozzles, flightconditions):
@@ -155,11 +164,11 @@ class HBTFBuilder(pyc.Cycle):
 
         if cycleData["balances"] is not None:
             balance = self.add_subsystem('balance', om.BalanceComp())
-            self.add_balances(self,balance,cycleData.balances)
+            self.add_balances(self,balance,cycleData.balances,design)
 
 
 
-        
+        #TODO: How do deal with balance connections
         if design:
             #balance.add_balance('W', units='lbm/s', eq_units='lbf')
             #Here balance.W is implicit state variable that is the OUTPUT of balance object
@@ -202,33 +211,33 @@ class HBTFBuilder(pyc.Cycle):
             #           (hp_Nmech)   HP spool speed to balance shaft power on the high spool
 
             if self.options['throttle_mode'] == 'T4': 
-                balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='degR')
+                #balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='degR')
                 self.connect('balance.FAR', 'burner.Fl_I:FAR')
                 self.connect('burner.Fl_O:tot:T', 'balance.lhs:FAR')
                 self.promotes('balance', inputs=[('rhs:FAR', 'T4_MAX')])
 
             elif self.options['throttle_mode'] == 'percent_thrust': 
-                balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='lbf', use_mult=True)
+                #balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='lbf', use_mult=True)
                 self.connect('balance.FAR', 'burner.Fl_I:FAR')
                 self.connect('perf.Fn', 'balance.rhs:FAR')
                 self.promotes('balance', inputs=[('mult:FAR', 'PC'), ('lhs:FAR', 'Fn_max')])
 
 
-            balance.add_balance('W', units='lbm/s', lower=10., upper=1000., eq_units='inch**2')
+            #balance.add_balance('W', units='lbm/s', lower=10., upper=1000., eq_units='inch**2')
             self.connect('balance.W', 'fc.W')
             self.connect('core_nozz.Throat:stat:area', 'balance.lhs:W')
 
-            balance.add_balance('BPR', lower=2., upper=10., eq_units='inch**2')
+            #balance.add_balance('BPR', lower=2., upper=10., eq_units='inch**2')
             self.connect('balance.BPR', 'splitter.BPR')
             self.connect('byp_nozz.Throat:stat:area', 'balance.lhs:BPR')
 
             # Again for the following two balances the mult val is set to -1 so that the NET torque is zero
-            balance.add_balance('lp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
+            #balance.add_balance('lp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.lp_Nmech', 'LP_Nmech')
             self.connect('lp_shaft.pwr_in_real', 'balance.lhs:lp_Nmech')
             self.connect('lp_shaft.pwr_out_real', 'balance.rhs:lp_Nmech')
 
-            balance.add_balance('hp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
+            #balance.add_balance('hp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.hp_Nmech', 'HP_Nmech')
             self.connect('hp_shaft.pwr_in_real', 'balance.lhs:hp_Nmech')
             self.connect('hp_shaft.pwr_out_real', 'balance.rhs:hp_Nmech')
@@ -239,7 +248,8 @@ class HBTFBuilder(pyc.Cycle):
             #                 'lpt', 'duct13', 'core_nozz', 'byp_bld', 'duct15', 'byp_nozz', 'lp_shaft', 'hp_shaft', 'perf'])
         
         # Set up all the flow connections:
-        self.pyc_connect_flow('fc.Fl_O', 'inlet.Fl_I')
+        self.connect_flow(cycleData.flow_connections)
+        """ self.pyc_connect_flow('fc.Fl_O', 'inlet.Fl_I')
         self.pyc_connect_flow('inlet.Fl_O', 'fan.Fl_I')
         self.pyc_connect_flow('fan.Fl_O', 'splitter.Fl_I')
         self.pyc_connect_flow('splitter.Fl_O1', 'duct4.Fl_I')
@@ -255,7 +265,7 @@ class HBTFBuilder(pyc.Cycle):
         self.pyc_connect_flow('duct13.Fl_O','core_nozz.Fl_I')
         self.pyc_connect_flow('splitter.Fl_O2', 'byp_bld.Fl_I')
         self.pyc_connect_flow('byp_bld.Fl_O', 'duct15.Fl_I')
-        self.pyc_connect_flow('duct15.Fl_O', 'byp_nozz.Fl_I')
+        self.pyc_connect_flow('duct15.Fl_O', 'byp_nozz.Fl_I') """
 
         #Bleed flows:
         self.pyc_connect_flow('hpc.cool1', 'lpt.cool1', connect_stat=False)

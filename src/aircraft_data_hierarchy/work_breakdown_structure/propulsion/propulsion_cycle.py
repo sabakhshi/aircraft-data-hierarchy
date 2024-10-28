@@ -31,12 +31,14 @@ class BalanceComponent(CommonBaseModel):
     lhs_name: Optional[str] = Field(
         None, description="The name of the left-hand side variable in the balance equation."
     )
+    lhs_val: Optional[float] = Field(None, description="The value of the left-hand side of the balance equation.")
     rhs_name: Optional[str] = Field(
         None, description="The name of the right-hand side variable in the balance equation."
     )
     rhs_val: Optional[float] = Field(None, description="The value of the right-hand side of the balance equation.")
     mult_val: float = Field(1.0, description="The multiplier value for the balance component.")
     use_mult: bool = Field(False, description="Whether to use the multiplier value.")
+    on_design: bool = Field(False, description="Should the balance only be used when in design mode.")
 
 
 class EngineElement(CommonBaseModel):
