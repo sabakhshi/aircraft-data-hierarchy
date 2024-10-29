@@ -35,8 +35,11 @@ class HBTFBuilder(pyc.Cycle):
             elif comp["map_data"] == "HPCMap":
                 md = pyc.HPCMap
                 prom_nmech = 'HP_Nmech'
+            else:
+                md = pyc.HPCMap
+                prom_nmech = 'HP_Nmech' #TODO: Filter out case in ADH
             self.add_subsystem(comp["name"], pyc.Compressor(map_data=md, bleed_names=comp["bleed_names"], 
-                                                            map_extrap=comp["bleed_names"], promotes_inputs=[('Nmech', prom_nmech)]))
+                                                            map_extrap=comp["bleed_names"]), promotes_inputs=[('Nmech', prom_nmech)])
 
     def add_turbines(self,turbines):
         for turb in turbines:
@@ -46,8 +49,11 @@ class HBTFBuilder(pyc.Cycle):
             elif turb["map_data"] == "HPTMap":
                 md = pyc.HPTMap
                 prom_nmech = 'HP_Nmech'
-            self.add_subsystem(turb["name"], pyc.Compressor(map_data=md, bleed_names=turb["bleed_names"], 
-                                                            map_extrap=turb["bleed_names"], promotes_inputs=[('Nmech', prom_nmech)]))
+            else:
+                md = pyc.HPTMap
+                prom_nmech = 'HP_Nmech'#TODO: Filter out case in ADH
+            self.add_subsystem(turb["name"], pyc.Turbine(map_data=md, bleed_names=turb["bleed_names"], 
+                                                            map_extrap=turb["bleed_names"]), promotes_inputs=[('Nmech', prom_nmech)])
 
     def add_combustors(self,combustors):
         for comb in combustors:
@@ -63,6 +69,7 @@ class HBTFBuilder(pyc.Cycle):
 
     def add_flightconditions(self,flightconditions):
         for fc in flightconditions:
+            print(fc)
             self.add_subsystem(fc["name"], pyc.FlightConditions())
 
     def add_inlets(self, inlets):
@@ -95,22 +102,29 @@ class HBTFBuilder(pyc.Cycle):
     #Connect the flow between engine elements
     def connect_flow(self, flow_connections):
         for fc in flow_connections:
-            self.connect("{}.Fl_O".format(flow_connections[0]),"{}.Fl_I".format(flow_connections[1]))
+            self.pyc_connect_flow("{}.Fl_O".format(fc[0]),"{}.Fl_I".format(fc[1]))
 
 
     #Connect the bleeds flows automatically based on the names specified by the user in the ADH
     #TODO: This is an experiment to see if we can connect components without having the user specify anything other than the names
     #The code is a little bit complicated and will likely be reworked
+    #TODO: Work out some bugs
     def connect_bleeds(self,cycleData):
         #Convert pydantic to a dictionary with the component and bleed information
-        componentNames  = set([comp["name"] for comp in cycleData["comps"]] + [turb["name"] for turb in cycleData["turbs"]]  + [bleed["name"] for bleed in cycleData["bleeds"]])
-        bleedNames = set([comp["bleed_names"] for comp in cycleData["comps"]] + [turb["bleed_names"] for turb in cycleData["turbs"]]  + [bleed["bleed_names"] for bleed in cycleData["bleeds"]])
+        componentNames  = set([comp["name"] for comp in cycleData["comp"]] + [turb["name"] for turb in cycleData["turb"]]  + [bleed["name"] for bleed in cycleData["bleeds"]])
+        #bleedNames = set([comp["bleed_names"] for comp in cycleData["comp"]] + [turb["bleed_names"] for turb in cycleData["turb"]]  + [bleed["bleed_names"] for bleed in cycleData["bleeds"]])
+        bleedNames = set(
+            [name for comp in cycleData["comp"] for name in comp["bleed_names"]] +
+            [name for turb in cycleData["turb"] for name in turb["bleed_names"]] +
+            [name for bleed in cycleData["bleeds"] for name in bleed["bleed_names"]]
+        )
+
         bleedPairs = dict.fromkeys(componentNames, [])
         
-        for comp in cycleData["comps"]:
+        for comp in cycleData["comp"]:
             for bn in comp["bleed_names"]:
                 bleedPairs[comp["name"]].append(bn)
-        for turb in cycleData["turbs"]:
+        for turb in cycleData["turb"]:
             for bn in turb["bleed_names"]:
                 bleedPairs[turb["name"]].append(bn)
         for bleed in cycleData["bleeds"]:
@@ -120,7 +134,9 @@ class HBTFBuilder(pyc.Cycle):
         # Go through each bleed, find its components, then connect it in the model
         for bn in bleedNames:
             cWB = [key for key, values in bleedPairs.items() if bn in values]
-            self.connect('{}.{}'.format(cWB[0],bn),'{}.{}'.format(cWB[1],bn), connect_stat=False)
+            print(cWB)
+            print(bn)
+            self.pyc_connect_flow('{}.{}'.format(cWB[0],bn),'{}.{}'.format(cWB[1],bn), connect_stat=False)
 
 
 
@@ -135,17 +151,20 @@ class HBTFBuilder(pyc.Cycle):
     def connect_nozz_to_fc(self, nozzles, flightconditions):
         for fc in flightconditions:
             for i, nozz in enumerate(nozzles):
-                self.connect('{}.Fl_0:stat:P'.format(fc["name"]),'{}.Ps_exhaust'.format(nozz["name"]))
+                self.connect('{}.Fl_O:stat:P'.format(fc["name"]),'{}.Ps_exhaust'.format(nozz["name"]))
 
 
     '''OPENMDAO: Main OpenMDAO setup functions'''
 
-    def initialize(self,cycleData):
-        '''May need to be used in this builder class in the future'''
+    def initialize(self):
+        '''Declare the cycle data from ADH as input'''
+        self.options.declare('adhCycleData')
+        self.options.declare('throttle_mode', default='T4', values=['T4', 'percent_thrust'])
         super().initialize()
 
-    def setup(self,cycleData):
+    def setup(self):
         #Initialize the model here by setting option variables such as a switch for design vs off-des cases. Setup data from ADH
+        cycleData = self.options["adhCycleData"]
 
         self.options['throttle_mode'] = cycleData["cycleInfo"]["throttle_mode"]
         design = cycleData["cycleInfo"]["design"]
@@ -165,7 +184,7 @@ class HBTFBuilder(pyc.Cycle):
         self.add_combustors(cycleData["comb"])
         self.add_turbines(cycleData["turb"])
         self.add_nozzles(cycleData["nozz"])
-        self.add_shafts(cycleData["shaft"])
+        self.add_shafts(cycleData["shafts"])
         self.add_bleeds(cycleData["bleeds"])
         self.add_ducts(cycleData["duct"])
 
@@ -182,7 +201,7 @@ class HBTFBuilder(pyc.Cycle):
 
 
         #Connect turbo machinery to shafts
-        self.connect_compturb_to_shafts(cycleData["comp"],cycleData["shafts"])
+        self.connect_compturb_to_shafts(cycleData["comp"],cycleData["shafts"],cycleData["cycleInfo"]["global_connections"])
 
 
         #Ideally expanding flow by conneting flight condition static pressure to nozzle exhaust pressure
@@ -204,9 +223,7 @@ class HBTFBuilder(pyc.Cycle):
         # http://openmdao.org/twodocs/versions/latest/features/building_blocks/components/balance_comp.html
         if cycleData["balances"] is not None:
             balance = self.add_subsystem('balance', om.BalanceComp())
-            self.add_balances(self,balance,cycleData.balances,design)
-
-            self.add_balance(lhs_name="my_)name")
+            self.add_balances(balance ,cycleData["balances"] ,design)
 
 
 
@@ -286,10 +303,11 @@ class HBTFBuilder(pyc.Cycle):
             
 
         # Set up all the engine element flow connections:
-        self.connect_flow(cycleData.flow_connections)
+        self.connect_flow(cycleData["cycleInfo"]["flow_connections"])
 
         #Bleed flows:
-        self.connect_bleeds(cycleData)
+        #self.connect_bleeds(cycleData)
+        #TEMP Disable
 
         
         #TODO: Specify solver settings which are hardcoded for now:

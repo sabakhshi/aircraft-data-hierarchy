@@ -112,7 +112,7 @@ class FlightConditions(EngineElement):
     d_ts : Optional[float]
         Temperature deviation in degrees Rankine.
     """
-
+    name: Optional[str] = Field(None, description="Name of flight conditions.")
     mn: Optional[List[float]] = Field(None, description="Mach number")
     alt: Optional[List[float]] = Field(None, description="Altitude in feet")
     d_ts: Optional[float] = Field(None, description="Temperature deviation in degrees Rankine")
@@ -358,8 +358,8 @@ class PropulsionCycle(CommonBaseModel):
     balance_components: Optional[List[BalanceComponent]] = Field(
         None, description="The list of balance components in the engine cycle."
     )
-    global_connections: Optional[dict] = Field(None, description="The global connections in the engine cycle.")
-    flow_connections: Optional[dict] = Field(None, description="The flow connections in the engine cycle.")
+    global_connections: Optional[List[str]] = Field(None, description="The global connections in the engine cycle.")
+    flow_connections: Optional[List[List[str]]] = Field(None, description="The flow connections in the engine cycle.")
     solver_settings: Optional[dict] = Field(None, description="The solver settings for the engine cycle.")
 
     @field_validator("thermo_method")
