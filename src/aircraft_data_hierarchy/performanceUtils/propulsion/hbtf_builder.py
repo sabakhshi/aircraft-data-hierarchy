@@ -1,16 +1,28 @@
-import sys
 import numpy as np
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from pydantic.v1 import utils
-import aircraft_data_hierarchy.performanceUtils.propulsion.builder_utils as bu
 
 import openmdao.api as om
 import pycycle.api as pyc
 
 
 class HBTFBuilder(pyc.Cycle):
+    '''
+    Builder class that creates a single-point pyCycle HBTF model using data from the ADH instance as input. 
+    This builder class is based on the pyCycle HBTF example. It sets critical cycle parameters then searches 
+    the ADH data for each component of the engine and then adds the appropriate pyCycle class to the OpenMDAO 
+    model with associated settings. In then connects the components in the OpenMDAO model using the ADH data.
+
+    TODO:
+    - The Balance component connections are still hard coded in this script. Implementing them in the ADH will require some thought
+    - The Solver settings are still hard coded in the script
+    - Initial guesses and other necessary information for the solver to run still needs to be implemented in the ADH 
+    '''
 
     
+
+
+    '''COMPONENTS: Class methods used by the builder class to add pyCycle components to the OpenMDAO model'''
+
+    #Add engine elements to model
 
     def add_compressors(self,compressors):
         for comp in compressors:
@@ -69,7 +81,7 @@ class HBTFBuilder(pyc.Cycle):
         for nozz in nozzles:
             self.add_subsystem(nozz["name"], pyc.Nozzle(nozzType=nozz["nozz_type"],lossCoef=nozz["loss_coef"]))
 
-    #Balances
+    #Add balance components to model
 
     def add_balances(self,balanceComp,balances,design):
         for bal in balances:
@@ -78,38 +90,64 @@ class HBTFBuilder(pyc.Cycle):
                                         lower=bal.lower,upper=bal.upper,val=bal.val,use_mult=bal.mult_val)
 
 
-    #Flow Connections
-    def connect_flow(flow_connections):
+    '''CONNECTIONS: Class methods used by the builder class to connect pyCycle components in the OpenMDAO model'''
+
+    #Connect the flow between engine elements
+    def connect_flow(self, flow_connections):
         for fc in flow_connections:
             self.connect("{}.Fl_O".format(flow_connections[0]),"{}.Fl_I".format(flow_connections[1]))
 
 
+    #Connect the bleeds flows automatically based on the names specified by the user in the ADH
+    #TODO: This is an experiment to see if we can connect components without having the user specify anything other than the names
+    #The code is a little bit complicated and will likely be reworked
+    def connect_bleeds(self,cycleData):
+        #Convert pydantic to a dictionary with the component and bleed information
+        componentNames  = set([comp["name"] for comp in cycleData["comps"]] + [turb["name"] for turb in cycleData["turbs"]]  + [bleed["name"] for bleed in cycleData["bleeds"]])
+        bleedNames = set([comp["bleed_names"] for comp in cycleData["comps"]] + [turb["bleed_names"] for turb in cycleData["turbs"]]  + [bleed["bleed_names"] for bleed in cycleData["bleeds"]])
+        bleedPairs = dict.fromkeys(componentNames, [])
+        
+        for comp in cycleData["comps"]:
+            for bn in comp["bleed_names"]:
+                bleedPairs[comp["name"]].append(bn)
+        for turb in cycleData["turbs"]:
+            for bn in turb["bleed_names"]:
+                bleedPairs[turb["name"]].append(bn)
+        for bleed in cycleData["bleeds"]:
+            for bn in bleed["bleed_names"]:
+                bleedPairs[bleed["name"]].append(bn)
 
-    #Connections
+        # Go through each bleed, find its components, then connect it in the model
+        for bn in bleedNames:
+            cWB = [key for key, values in bleedPairs.items() if bn in values]
+            self.connect('{}.{}'.format(cWB[0],bn),'{}.{}'.format(cWB[1],bn), connect_stat=False)
 
+
+
+    #Connects turbomachinery components to the shafts as specified by the user
     def connect_compturb_to_shafts(self, compturb, shafts, gc):
         for shaft in shafts:
             for i, comp in enumerate(compturb):
                 if "{},{}".format(comp["name"],shaft["name"]) in gc:
                     self.connect('{}.trq'.format(comp["name"]),'{}.trq_{}'.format(shaft["name"],str(i)))
 
-
+    #Connects the nozzle exit conditions to flight condition to get a perfectly expanded nozzle flow
     def connect_nozz_to_fc(self, nozzles, flightconditions):
         for fc in flightconditions:
             for i, nozz in enumerate(nozzles):
                 self.connect('{}.Fl_0:stat:P'.format(fc["name"]),'{}.Ps_exhaust'.format(nozz["name"]))
 
-    def initialize(self,cycleData):
 
+    '''OPENMDAO: Main OpenMDAO setup functions'''
+
+    def initialize(self,cycleData):
+        '''May need to be used in this builder class in the future'''
         super().initialize()
 
     def setup(self,cycleData):
-        #Setup the problem by including all the relavant components here - comp, burner, turbine etc
+        #Initialize the model here by setting option variables such as a switch for design vs off-des cases. Setup data from ADH
 
-        # Initialize the model here by setting option variables such as a switch for design vs off-des cases
         self.options['throttle_mode'] = cycleData["cycleInfo"]["throttle_mode"]
-        
-        #Create any relavent short hands here:
         design = cycleData["cycleInfo"]["design"]
         
         if cycleData["cycleInfo"]["thermo_method"] == "TABULAR": 
@@ -119,6 +157,7 @@ class HBTFBuilder(pyc.Cycle):
             self.options['thermo_method'] = 'CEA'
             self.options['thermo_data'] = pyc.species_data.janaf
 
+        #Add all the engine components from the ADH using helper functions
         self.add_flightconditions(cycleData["fc"])
         self.add_inlets(cycleData["inlets"])
         self.add_splitters(cycleData["splitters"])
@@ -130,7 +169,7 @@ class HBTFBuilder(pyc.Cycle):
         self.add_bleeds(cycleData["bleeds"])
         self.add_ducts(cycleData["duct"])
 
-        #Temporary till we can figure out the performance
+        #Hardcode the pyCycle performance group for now until we figure out how to connect this to the ADH
         self.add_subsystem('perf', pyc.Performance(num_nozzles=2, num_burners=1))
         # Now use the explicit connect method to make connections -- connect(<from>, <to>)
         #Connect the inputs to perf group
@@ -142,13 +181,15 @@ class HBTFBuilder(pyc.Cycle):
         self.connect('byp_nozz.Fg', 'perf.Fg_1')
 
 
-
+        #Connect turbo machinery to shafts
         self.connect_compturb_to_shafts(cycleData["comp"],cycleData["shafts"])
+
+
         #Ideally expanding flow by conneting flight condition static pressure to nozzle exhaust pressure
         self.connect_nozz_to_fc(cycleData["nozz"], cycleData["fc"])
 
 
-        #Create a balance component
+        ##Add the balance component using the helper function.
         # Balances can be a bit confusing, here's some explanation -
         #   State Variables:
         #           (W)        Inlet mass flow rate to implictly balance thrust
@@ -161,14 +202,15 @@ class HBTFBuilder(pyc.Cycle):
         #           (hpt_PR)   HPT press ratio to balance shaft power on the high spool
         # Ref: look at the XDSM diagrams in the pyCycle paper and this:
         # http://openmdao.org/twodocs/versions/latest/features/building_blocks/components/balance_comp.html
-
         if cycleData["balances"] is not None:
             balance = self.add_subsystem('balance', om.BalanceComp())
             self.add_balances(self,balance,cycleData.balances,design)
 
+            self.add_balance(lhs_name="my_)name")
 
 
-        #TODO: How do deal with balance connections
+
+        #TODO: The balance connections are hardcoded here until I can figure out how to implement their specification in the ADH
         if design:
             #balance.add_balance('W', units='lbm/s', eq_units='lbf')
             #Here balance.W is implicit state variable that is the OUTPUT of balance object
@@ -242,38 +284,15 @@ class HBTFBuilder(pyc.Cycle):
             self.connect('hp_shaft.pwr_in_real', 'balance.lhs:hp_Nmech')
             self.connect('hp_shaft.pwr_out_real', 'balance.rhs:hp_Nmech')
             
-            # Specify the order in which the subsystems are executed:
-            
-            # self.set_order(['balance', 'fc', 'inlet', 'fan', 'splitter', 'duct4', 'lpc', 'duct6', 'hpc', 'bld3', 'burner', 'hpt', 'duct11',
-            #                 'lpt', 'duct13', 'core_nozz', 'byp_bld', 'duct15', 'byp_nozz', 'lp_shaft', 'hp_shaft', 'perf'])
-        
-        # Set up all the flow connections:
+
+        # Set up all the engine element flow connections:
         self.connect_flow(cycleData.flow_connections)
-        """ self.pyc_connect_flow('fc.Fl_O', 'inlet.Fl_I')
-        self.pyc_connect_flow('inlet.Fl_O', 'fan.Fl_I')
-        self.pyc_connect_flow('fan.Fl_O', 'splitter.Fl_I')
-        self.pyc_connect_flow('splitter.Fl_O1', 'duct4.Fl_I')
-        self.pyc_connect_flow('duct4.Fl_O', 'lpc.Fl_I')
-        self.pyc_connect_flow('lpc.Fl_O', 'duct6.Fl_I')
-        self.pyc_connect_flow('duct6.Fl_O', 'hpc.Fl_I')
-        self.pyc_connect_flow('hpc.Fl_O', 'bld3.Fl_I')
-        self.pyc_connect_flow('bld3.Fl_O', 'burner.Fl_I')
-        self.pyc_connect_flow('burner.Fl_O', 'hpt.Fl_I')
-        self.pyc_connect_flow('hpt.Fl_O', 'duct11.Fl_I')
-        self.pyc_connect_flow('duct11.Fl_O', 'lpt.Fl_I')
-        self.pyc_connect_flow('lpt.Fl_O', 'duct13.Fl_I')
-        self.pyc_connect_flow('duct13.Fl_O','core_nozz.Fl_I')
-        self.pyc_connect_flow('splitter.Fl_O2', 'byp_bld.Fl_I')
-        self.pyc_connect_flow('byp_bld.Fl_O', 'duct15.Fl_I')
-        self.pyc_connect_flow('duct15.Fl_O', 'byp_nozz.Fl_I') """
 
         #Bleed flows:
-        self.pyc_connect_flow('hpc.cool1', 'lpt.cool1', connect_stat=False)
-        self.pyc_connect_flow('hpc.cool2', 'lpt.cool2', connect_stat=False)
-        self.pyc_connect_flow('bld3.cool3', 'hpt.cool3', connect_stat=False)
-        self.pyc_connect_flow('bld3.cool4', 'hpt.cool4', connect_stat=False)
+        self.connect_bleeds(cycleData)
+
         
-        #Specify solver settings:
+        #TODO: Specify solver settings which are hardcoded for now:
         newton = self.nonlinear_solver = om.NewtonSolver()
         newton.options['atol'] = 1e-8
 

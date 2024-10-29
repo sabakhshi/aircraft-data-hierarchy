@@ -260,7 +260,6 @@ class Turbine(EngineElement):
     map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
     map_interp_method: Optional[str] = Field(None, description="Method to use for map interpolation.")
     alpha_map: Optional[str] = Field(None, description="Alpha Map")
-    bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
     pr_des : Optional[float] = Field(None, description="Design condition pressure ratio")
     eff_des : Optional[float] = Field(None, description="Design condition efficeincy")
     area: Optional[float] = Field(None, description="Frontal area of component")
