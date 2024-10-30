@@ -102,7 +102,10 @@ class HBTFBuilder(pyc.Cycle):
     #Connect the flow between engine elements
     def connect_flow(self, flow_connections):
         for fc in flow_connections:
-            self.pyc_connect_flow("{}.Fl_O".format(fc[0]),"{}.Fl_I".format(fc[1]))
+            if len(fc)>2:
+                self.pyc_connect_flow("{}.Fl_O{}".format(fc[0],fc[2]),"{}.Fl_I".format(fc[1]))
+            else:
+                self.pyc_connect_flow("{}.Fl_O".format(fc[0]),"{}.Fl_I".format(fc[1]))
 
 
     #Connect the bleeds flows automatically based on the names specified by the user in the ADH
@@ -130,6 +133,8 @@ class HBTFBuilder(pyc.Cycle):
         for bleed in cycleData["bleeds"]:
             for bn in bleed["bleed_names"]:
                 bleedPairs[bleed["name"]].append(bn)
+
+        print(bleedPairs)
 
         # Go through each bleed, find its components, then connect it in the model
         for bn in bleedNames:
@@ -306,7 +311,7 @@ class HBTFBuilder(pyc.Cycle):
         self.connect_flow(cycleData["cycleInfo"]["flow_connections"])
 
         #Bleed flows:
-        #self.connect_bleeds(cycleData)
+        self.connect_bleeds(cycleData)
         #TEMP Disable
 
         

@@ -398,7 +398,7 @@ if __name__ == "__main__":
             ["fc","inlet"],
             ["inlet","fan"],
             ["fan","splitter"],
-            ["splitter","duct4"],
+            ["splitter","duct4","1"],
             ["duct4","lpc"],
             ["lpc","duct6"],
             ["duct6","hpc"],
@@ -409,7 +409,7 @@ if __name__ == "__main__":
             ["duct11","lpt"],
             ["lpt","duct13"],
             ["duct13","core_nozz"],
-            ["splitter","byp_bld"],
+            ["splitter","byp_bld","2"],
             ["byp_bld","duct15"],
             ["duct15","byp_nozz"]
         ]
