@@ -311,7 +311,7 @@ class HBTFBuilder(pyc.Cycle):
         self.connect_flow(cycleData["cycleInfo"]["flow_connections"])
 
         #Bleed flows:
-        self.connect_bleeds(cycleData)
+        #self.connect_bleeds(cycleData)
         #TEMP Disable
 
         
