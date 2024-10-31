@@ -233,6 +233,13 @@ class Combustor(EngineElement):
     FAR: Optional[float] = Field(None, description="Fuel-air ratio")
     area: Optional[float] = Field(None, description="Frontal area of component")
 
+    @field_validator("fuel_type")
+    def validate_fuel_type(cls, v):
+        allowed_types = ["FAR", "Jet-A(g)"]
+        if v not in allowed_types:
+            raise ValueError(f"Fuel type must be one of {allowed_types}")
+        return v
+
 
 class Turbine(EngineElement):
     """
@@ -353,7 +360,6 @@ class PropulsionCycle(CommonBaseModel):
     thermo_method: str = Field("TABULAR", description="The thermodynamic method used in the engine cycle.")
     thermo_data: Optional[str] = Field(None, description="The thermodynamic data used in the engine cycle.")
     throttle_mode: str = Field("T4", description="What quanity should be used to throttle engine for off-design cases.")
-    fuel_type: str = Field("FAR", description="Type of fueld considered for the cycle.")
     elements: List[EngineElement] = Field(..., description="The list of engine elements in the engine cycle.")
     balance_components: Optional[List[BalanceComponent]] = Field(
         None, description="The list of balance components in the engine cycle."
@@ -374,13 +380,6 @@ class PropulsionCycle(CommonBaseModel):
         allowed_methods = ["T4", "percent_throttle"]
         if v not in allowed_methods:
             raise ValueError(f"Throttle mode must be one of {allowed_methods}")
-        return v
-    
-    @field_validator("fuel_type")
-    def validate_fuel_type(cls, v):
-        allowed_types = ["FAR", "Jet-A(g)"]
-        if v not in allowed_types:
-            raise ValueError(f"Fuel type must be one of {allowed_types}")
         return v
 
 

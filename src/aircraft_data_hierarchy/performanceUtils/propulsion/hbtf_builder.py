@@ -39,7 +39,7 @@ class HBTFBuilder(pyc.Cycle):
                 md = pyc.HPCMap
                 prom_nmech = 'HP_Nmech' #TODO: Filter out case in ADH
             self.add_subsystem(comp["name"], pyc.Compressor(map_data=md, bleed_names=comp["bleed_names"], 
-                                                            map_extrap=comp["bleed_names"]), promotes_inputs=[('Nmech', prom_nmech)])
+                                                            map_extrap=comp["map_extrap"]), promotes_inputs=[('Nmech', prom_nmech)])
 
     def add_turbines(self,turbines):
         for turb in turbines:
@@ -53,7 +53,7 @@ class HBTFBuilder(pyc.Cycle):
                 md = pyc.HPTMap
                 prom_nmech = 'HP_Nmech'#TODO: Filter out case in ADH
             self.add_subsystem(turb["name"], pyc.Turbine(map_data=md, bleed_names=turb["bleed_names"], 
-                                                            map_extrap=turb["bleed_names"]), promotes_inputs=[('Nmech', prom_nmech)])
+                                                            map_extrap=turb["map_extrap"]), promotes_inputs=[('Nmech', prom_nmech)])
 
     def add_combustors(self,combustors):
         for comb in combustors:
@@ -69,7 +69,6 @@ class HBTFBuilder(pyc.Cycle):
 
     def add_flightconditions(self,flightconditions):
         for fc in flightconditions:
-            print(fc)
             self.add_subsystem(fc["name"], pyc.FlightConditions())
 
     def add_inlets(self, inlets):
@@ -109,40 +108,31 @@ class HBTFBuilder(pyc.Cycle):
 
 
     #Connect the bleeds flows automatically based on the names specified by the user in the ADH
-    #TODO: This is an experiment to see if we can connect components without having the user specify anything other than the names
-    #The code is a little bit complicated and will likely be reworked
-    #TODO: Work out some bugs
+    #This is an experiment to see if we can connect components without having the user specify anything other than the names
+    #TODO: The code is a little bit complicated and will likely be reworked
     def connect_bleeds(self,cycleData):
         #Convert pydantic to a dictionary with the component and bleed information
-        componentNames  = set([comp["name"] for comp in cycleData["comp"]] + [turb["name"] for turb in cycleData["turb"]]  + [bleed["name"] for bleed in cycleData["bleeds"]])
-        #bleedNames = set([comp["bleed_names"] for comp in cycleData["comp"]] + [turb["bleed_names"] for turb in cycleData["turb"]]  + [bleed["bleed_names"] for bleed in cycleData["bleeds"]])
         bleedNames = set(
             [name for comp in cycleData["comp"] for name in comp["bleed_names"]] +
             [name for turb in cycleData["turb"] for name in turb["bleed_names"]] +
             [name for bleed in cycleData["bleeds"] for name in bleed["bleed_names"]]
         )
 
-        bleedPairs = dict.fromkeys(componentNames, [])
-        
-        for comp in cycleData["comp"]:
-            for bn in comp["bleed_names"]:
-                bleedPairs[comp["name"]].append(bn)
-        for turb in cycleData["turb"]:
-            for bn in turb["bleed_names"]:
-                bleedPairs[turb["name"]].append(bn)
-        for bleed in cycleData["bleeds"]:
-            for bn in bleed["bleed_names"]:
-                bleedPairs[bleed["name"]].append(bn)
+        bleedPairs = {}
 
-        print(bleedPairs)
+        for comp in cycleData["comp"]:
+            bleedPairs[comp["name"]] = comp["bleed_names"]
+        for turb in cycleData["turb"]:
+            bleedPairs[turb["name"]] = turb["bleed_names"]
+        for bleed in cycleData["bleeds"]:
+            bleedPairs[bleed["name"]] = bleed["bleed_names"]
+
 
         # Go through each bleed, find its components, then connect it in the model
         for bn in bleedNames:
             cWB = [key for key, values in bleedPairs.items() if bn in values]
-            print(cWB)
-            print(bn)
-            self.pyc_connect_flow('{}.{}'.format(cWB[0],bn),'{}.{}'.format(cWB[1],bn), connect_stat=False)
-
+            if len(cWB)>1:
+                self.pyc_connect_flow('{}.{}'.format(cWB[0],bn),'{}.{}'.format(cWB[1],bn), connect_stat=False)
 
 
     #Connects turbomachinery components to the shafts as specified by the user
@@ -169,7 +159,7 @@ class HBTFBuilder(pyc.Cycle):
 
     def setup(self):
         #Initialize the model here by setting option variables such as a switch for design vs off-des cases. Setup data from ADH
-        cycleData = self.options["adhCycleData"]
+        self.cycleData = cycleData = self.options["adhCycleData"]
 
         self.options['throttle_mode'] = cycleData["cycleInfo"]["throttle_mode"]
         design = cycleData["cycleInfo"]["design"]
@@ -182,16 +172,20 @@ class HBTFBuilder(pyc.Cycle):
             self.options['thermo_data'] = pyc.species_data.janaf
 
         #Add all the engine components from the ADH using helper functions
+        
         self.add_flightconditions(cycleData["fc"])
         self.add_inlets(cycleData["inlets"])
-        self.add_splitters(cycleData["splitters"])
         self.add_compressors(cycleData["comp"])
+        self.add_splitters(cycleData["splitters"])
+        self.add_ducts(cycleData["duct"])
+        self.add_bleeds(cycleData["bleeds"])
         self.add_combustors(cycleData["comb"])
         self.add_turbines(cycleData["turb"])
         self.add_nozzles(cycleData["nozz"])
         self.add_shafts(cycleData["shafts"])
-        self.add_bleeds(cycleData["bleeds"])
-        self.add_ducts(cycleData["duct"])
+        
+        
+        
 
         #Hardcode the pyCycle performance group for now until we figure out how to connect this to the ADH
         self.add_subsystem('perf', pyc.Performance(num_nozzles=2, num_burners=1))
@@ -226,34 +220,34 @@ class HBTFBuilder(pyc.Cycle):
         #           (hpt_PR)   HPT press ratio to balance shaft power on the high spool
         # Ref: look at the XDSM diagrams in the pyCycle paper and this:
         # http://openmdao.org/twodocs/versions/latest/features/building_blocks/components/balance_comp.html
-        if cycleData["balances"] is not None:
-            balance = self.add_subsystem('balance', om.BalanceComp())
-            self.add_balances(balance ,cycleData["balances"] ,design)
+        #if cycleData["balances"] is not None:
+        balance = self.add_subsystem('balance', om.BalanceComp())
+        #self.add_balances(balance ,cycleData["balances"] ,design)
 
 
 
         #TODO: The balance connections are hardcoded here until I can figure out how to implement their specification in the ADH
         if design:
-            #balance.add_balance('W', units='lbm/s', eq_units='lbf')
+            balance.add_balance('W', units='lbm/s', eq_units='lbf')
             #Here balance.W is implicit state variable that is the OUTPUT of balance object
             self.connect('balance.W', 'fc.W') #Connect the output of balance to the relevant input
             self.connect('perf.Fn', 'balance.lhs:W')       #This statement makes perf.Fn the LHS of the balance eqn.
             self.promotes('balance', inputs=[('rhs:W', 'Fn_DES')])
 
-            #balance.add_balance('FAR', eq_units='degR', lower=1e-4, val=.017)
+            balance.add_balance('FAR', eq_units='degR', lower=1e-4, val=.017)
             self.connect('balance.FAR', 'burner.Fl_I:FAR')
             self.connect('burner.Fl_O:tot:T', 'balance.lhs:FAR')
             self.promotes('balance', inputs=[('rhs:FAR', 'T4_MAX')])
             
             # Note that for the following two balances the mult val is set to -1 so that the NET torque is zero
-            #balance.add_balance('lpt_PR', val=1.5, lower=1.001, upper=8,
-                                #eq_units='hp', use_mult=True, mult_val=-1)
+            balance.add_balance('lpt_PR', val=1.5, lower=1.001, upper=8,
+                                eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.lpt_PR', 'lpt.PR')
             self.connect('lp_shaft.pwr_in_real', 'balance.lhs:lpt_PR')
             self.connect('lp_shaft.pwr_out_real', 'balance.rhs:lpt_PR')
 
-            #balance.add_balance('hpt_PR', val=1.5, lower=1.001, upper=8,
-                                #eq_units='hp', use_mult=True, mult_val=-1)
+            balance.add_balance('hpt_PR', val=1.5, lower=1.001, upper=8,
+                                eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.hpt_PR', 'hpt.PR')
             self.connect('hp_shaft.pwr_in_real', 'balance.lhs:hpt_PR')
             self.connect('hp_shaft.pwr_out_real', 'balance.rhs:hpt_PR')
@@ -275,44 +269,46 @@ class HBTFBuilder(pyc.Cycle):
             #           (hp_Nmech)   HP spool speed to balance shaft power on the high spool
 
             if self.options['throttle_mode'] == 'T4': 
-                #balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='degR')
+                balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='degR')
                 self.connect('balance.FAR', 'burner.Fl_I:FAR')
                 self.connect('burner.Fl_O:tot:T', 'balance.lhs:FAR')
                 self.promotes('balance', inputs=[('rhs:FAR', 'T4_MAX')])
 
             elif self.options['throttle_mode'] == 'percent_thrust': 
-                #balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='lbf', use_mult=True)
+                balance.add_balance('FAR', val=0.017, lower=1e-4, eq_units='lbf', use_mult=True)
                 self.connect('balance.FAR', 'burner.Fl_I:FAR')
                 self.connect('perf.Fn', 'balance.rhs:FAR')
                 self.promotes('balance', inputs=[('mult:FAR', 'PC'), ('lhs:FAR', 'Fn_max')])
 
-
-            #balance.add_balance('W', units='lbm/s', lower=10., upper=1000., eq_units='inch**2')
+            balance.add_balance('W', units='lbm/s', lower=10., upper=1000., eq_units='inch**2')
             self.connect('balance.W', 'fc.W')
             self.connect('core_nozz.Throat:stat:area', 'balance.lhs:W')
 
-            #balance.add_balance('BPR', lower=2., upper=10., eq_units='inch**2')
+            balance.add_balance('BPR', lower=2., upper=10., eq_units='inch**2')
             self.connect('balance.BPR', 'splitter.BPR')
             self.connect('byp_nozz.Throat:stat:area', 'balance.lhs:BPR')
 
             # Again for the following two balances the mult val is set to -1 so that the NET torque is zero
-            #balance.add_balance('lp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
+            balance.add_balance('lp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.lp_Nmech', 'LP_Nmech')
             self.connect('lp_shaft.pwr_in_real', 'balance.lhs:lp_Nmech')
             self.connect('lp_shaft.pwr_out_real', 'balance.rhs:lp_Nmech')
 
-            #balance.add_balance('hp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
+            balance.add_balance('hp_Nmech', val=1.5, units='rpm', lower=500., eq_units='hp', use_mult=True, mult_val=-1)
             self.connect('balance.hp_Nmech', 'HP_Nmech')
             self.connect('hp_shaft.pwr_in_real', 'balance.lhs:hp_Nmech')
             self.connect('hp_shaft.pwr_out_real', 'balance.rhs:hp_Nmech')
             
+        # Specify the order in which the subsystems are executed:
+            
+        self.set_order(['balance', 'fc', 'inlet', 'fan', 'splitter', 'duct4', 'lpc', 'duct6', 'hpc', 'bld3', 'burner', 'hpt', 'duct11',
+                        'lpt', 'duct13', 'core_nozz', 'byp_bld', 'duct15', 'byp_nozz', 'lp_shaft', 'hp_shaft', 'perf'])
 
         # Set up all the engine element flow connections:
         self.connect_flow(cycleData["cycleInfo"]["flow_connections"])
 
-        #Bleed flows:
-        #self.connect_bleeds(cycleData)
-        #TEMP Disable
+        #Connect bleed flows:
+        self.connect_bleeds(cycleData)
 
         
         #TODO: Specify solver settings which are hardcoded for now:
