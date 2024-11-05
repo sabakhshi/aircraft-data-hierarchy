@@ -441,7 +441,7 @@ if __name__ == "__main__":
     lpt = Turbine(name="lpt", bleed_names=['cool1','cool2'], map_extrap=True)
     duct13 = Duct(name="duct13")
     core_nozz = Nozzle(name="core_nozz", nozz_type="CV", loss_coef="Cv")
-    byp_bld = Bleed(name="byp_bld", bleed_names=[])
+    byp_bld = Bleed(name="byp_bld", bleed_names=['bypBld'])
     duct15 = Duct(name="duct15")
     byp_nozz = Nozzle(name="byp_nozz", nozz_type="CV", loss_coef="Cv")
     lp_shaft = Shaft(name="lp_shaft", num_ports=3)
