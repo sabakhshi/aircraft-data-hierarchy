@@ -122,10 +122,11 @@ class HBTFBuilder(pyc.Cycle):
 
         for comp in cycleData["comp"]:
             bleedPairs[comp["name"]] = comp["bleed_names"]
-        for turb in cycleData["turb"]:
-            bleedPairs[turb["name"]] = turb["bleed_names"]
         for bleed in cycleData["bleeds"]:
             bleedPairs[bleed["name"]] = bleed["bleed_names"]
+        for turb in cycleData["turb"]:
+            bleedPairs[turb["name"]] = turb["bleed_names"]
+        
 
 
         # Go through each bleed, find its components, then connect it in the model
