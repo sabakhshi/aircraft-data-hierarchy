@@ -126,9 +126,7 @@ class HBTFBuilder(pyc.Cycle):
             bleedPairs[bleed["name"]] = bleed["bleed_names"]
         for turb in cycleData["turb"]:
             bleedPairs[turb["name"]] = turb["bleed_names"]
-        
-
-
+    
         # Go through each bleed, find its components, then connect it in the model
         for bn in bleedNames:
             cWB = [key for key, values in bleedPairs.items() if bn in values]
@@ -139,9 +137,16 @@ class HBTFBuilder(pyc.Cycle):
     #Connects turbomachinery components to the shafts as specified by the user
     def connect_compturb_to_shafts(self, compturb, shafts, gc):
         for shaft in shafts:
-            for i, comp in enumerate(compturb):
+            #print(shaft["name"])
+            i  = 0
+            for comp in compturb:
+                #print(comp["name"])
+                #print(i)
                 if "{},{}".format(comp["name"],shaft["name"]) in gc:
+                    #print("{},{} Found in GC".format(comp["name"],shaft["name"]))
+                    #print('{}.trq to {}.trq_{} CONNECTED'.format(comp["name"],shaft["name"],str(i)))
                     self.connect('{}.trq'.format(comp["name"]),'{}.trq_{}'.format(shaft["name"],str(i)))
+                    i += 1
 
     #Connects the nozzle exit conditions to flight condition to get a perfectly expanded nozzle flow
     def connect_nozz_to_fc(self, nozzles, flightconditions):
