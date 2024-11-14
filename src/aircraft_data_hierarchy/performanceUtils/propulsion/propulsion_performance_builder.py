@@ -19,9 +19,9 @@ from aircraft_data_hierarchy.work_breakdown_structure.propulsion import (
     Shaft,
     Combustor,
     BalanceComponent,
+    Performance,
 )
 from aircraft_data_hierarchy.performanceUtils.propulsion.hbtf_builder import HBTFBuilder
-import pycycle.api as pyc
 import openmdao.api as om
 
 
@@ -240,9 +240,35 @@ class PropulsionPerformanceBuilder:
                 balances.append(balanceData)
         return balances
 
+    def getPerformance(self):
+        perfComps = self.ADHInstance.cycle.performance_components
+        performance = []
+        for perf in perfComps:
+            if utils.lenient_isinstance(perf, Performance):
+                performanceData = {
+                    "name": perf.name,
+                    "pt2_source": perf.pt2_source,
+                    "pt2": perf.pt2,
+                    "pt3_source": perf.pt3_source,
+                    "pt3": perf.pt3,
+                    "wfuel_0_source": perf.wfuel_0_source,
+                    "wfuel_0": perf.wfuel_0,
+                    "ram_drag_source": perf.ram_drag_source,
+                    "ram_drag": perf.ram_drag,
+                    "fg_0_source": perf.fg_0_source,
+                    "fg_0": perf.fg_0,
+                    "fg_1_source": perf.fg_1_source,
+                    "fg_1": perf.fg_1,
+                    "fn": perf.fn,
+                    "opr": perf.opr,
+                    "tsfc": perf.tsfc,
+                }
+                performance.append(performanceData)
+        return performance
+
     def getInput(self):
         """
-        Primary function that prepares the input dictionaries for the specified engine types.
+        Primary function that prepares the input dictionaries.
         """
 
         self.cycleData = {
@@ -258,6 +284,7 @@ class PropulsionPerformanceBuilder:
             "shafts": self.getShaft(),
             "bleeds": self.getBleed(),
             "balances": self.getBalance(),
+            "perf": self.getPerformance(),
         }
 
         return self.cycleData
@@ -281,11 +308,11 @@ class pyCycleBuilder(PropulsionPerformanceBuilder):
     specified here.
     """
 
-    def getInput(self, engineType):
+    def getInput(self):
         """
         Handled by parent. Any other specified tasks for pyCycle can go here.
         """
-        return super().getInput(engineType)
+        return super().getInput()
 
     def transferData(self):
         """
@@ -336,6 +363,16 @@ if __name__ == "__main__":
     lp_shaft = Shaft(name="lp_shaft", num_ports=3)
     hp_shaft = Shaft(name="hp_shaft", num_ports=2)
 
+    perf = Performance(
+        name="perf",
+        pt2_source="inlet",
+        pt3_source="hpc",
+        wfuel_0_source="burner",
+        ram_drag_source="inlet",
+        fg_0_source="core_nozz",
+        fg_1_source="byp_nozz",
+    )
+
     # Set PR and eff
     fan.pr_des = 1.685
     fan.eff_des = 0.8948
@@ -374,6 +411,7 @@ if __name__ == "__main__":
         thermo_method="TABULAR",
         throttle_mode="T4",
         balance_components=[],
+        performance_components=[perf],
         global_connections=["fan,lp_shaft", "lpc,lp_shaft", "lpt,lp_shaft", "hpc,hp_shaft", "hpt,hp_shaft"],
         flow_connections=[
             ["fc", "inlet"],
@@ -419,11 +457,11 @@ if __name__ == "__main__":
     )
 
     pycTest = pyCycleBuilder(ADHInstance)
-    # print(pycTest.getInput("HBTF"))
-    pycTest.getInput("HBTF")
+    # print(pycTest.getInput())
+    pycTest.getInput()
 
     prob = om.Problem()
-    prob.model = pycTest.getOutput("HBTF")
+    prob.model = pycTest.getOutput()
 
     prob.setup(check=True)
     om.n2(prob)

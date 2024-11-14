@@ -3,7 +3,6 @@ from pydantic import Field, field_validator
 from ...common_base_model import CommonBaseModel
 
 
-
 class BalanceComponent(CommonBaseModel):
     """
     Represents a balance component in the engine cycle.
@@ -53,6 +52,7 @@ class EngineElement(CommonBaseModel):
     name: str = Field(..., description="The name of the engine element.")
     options: Optional[dict] = Field(None, description="The options associated with the engine element.")
 
+
 class Shaft(EngineElement):
     """
     Shaft component of the engine.
@@ -69,6 +69,7 @@ class Shaft(EngineElement):
     nmech: Optional[float] = Field(None, description="Mechanical speed in RPM")
     nmech_type: Optional[str] = Field(None, description="Low or high pressure shaft")
 
+
 class Bleed(EngineElement):
     """
     Bleed output component
@@ -82,8 +83,7 @@ class Bleed(EngineElement):
     """
 
     bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed connections associated")
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
-
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
 
 
 class OffDesignPoint(CommonBaseModel):
@@ -112,6 +112,7 @@ class FlightConditions(EngineElement):
     d_ts : Optional[float]
         Temperature deviation in degrees Rankine.
     """
+
     name: Optional[str] = Field(None, description="Name of flight conditions.")
     mn: Optional[List[float]] = Field(None, description="Mach number")
     alt: Optional[List[float]] = Field(None, description="Altitude in feet")
@@ -129,8 +130,8 @@ class Inlet(EngineElement):
     ram_recovery : Optional[float]
         Ram recovery factor.
     """
-    
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     mn: Optional[float] = Field(None, description="Mach number")
     ram_recovery: Optional[float] = Field(None, description="Ram recovery factor")
     area: Optional[float] = Field(None, description="Frontal area of component")
@@ -157,14 +158,14 @@ class Compressor(EngineElement):
     """
 
     mn: Optional[float] = Field(None, description="Mach number")
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     map_data: Optional[str] = Field(None, description="Map data for the compressor")
     map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
     map_interp_method: Optional[str] = Field(None, description="Method to use for map interpolation.")
     alpha_map: Optional[str] = Field(None, description="Alpha Map")
     bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
-    pr_des : Optional[float] = Field(None, description="Design condition pressure ratio")
-    eff_des : Optional[float] = Field(None, description="Design condition efficeincy")
+    pr_des: Optional[float] = Field(None, description="Design condition pressure ratio")
+    eff_des: Optional[float] = Field(None, description="Design condition efficeincy")
     area: Optional[float] = Field(None, description="Frontal area of component")
 
 
@@ -186,7 +187,7 @@ class Splitter(EngineElement):
         Area for the second flow path.
     """
 
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     bpr: Optional[float] = Field(None, description="Bypass ratio")
     mn1: Optional[float] = Field(None, description="Mach number for the first flow path")
     mn2: Optional[float] = Field(None, description="Mach number for the second flow path")
@@ -206,7 +207,7 @@ class Duct(EngineElement):
         Pressure drop ratio.
     """
 
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     mn: Optional[float] = Field(None, description="Mach number")
     dPqP: Optional[float] = Field(None, description="Pressure drop ratio")
     Q_dot: Optional[float] = Field(None, description="heat flow rate into (positive) or out of (negative) the air")
@@ -226,7 +227,8 @@ class Combustor(EngineElement):
     dp_qp : Optional[float]
         Pressure drop ratio.
     """
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     fuel_type: Optional[str] = Field(None, description="Type of fuel used")
     mn: Optional[float] = Field(None, description="Mach number")
     dp_qp: Optional[float] = Field(None, description="Pressure drop ratio")
@@ -260,15 +262,16 @@ class Turbine(EngineElement):
     effDes : Optional[float]
         Design condition efficeincy
     """
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     mn: Optional[float] = Field(None, description="Mach number")
     map_data: Optional[str] = Field(None, description="Map data for the turbine")
     bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
     map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
     map_interp_method: Optional[str] = Field(None, description="Method to use for map interpolation.")
     alpha_map: Optional[str] = Field(None, description="Alpha Map")
-    pr_des : Optional[float] = Field(None, description="Design condition pressure ratio")
-    eff_des : Optional[float] = Field(None, description="Design condition efficeincy")
+    pr_des: Optional[float] = Field(None, description="Design condition pressure ratio")
+    eff_des: Optional[float] = Field(None, description="Design condition efficeincy")
     area: Optional[float] = Field(None, description="Frontal area of component")
 
 
@@ -285,15 +288,13 @@ class Nozzle(EngineElement):
     cv : Optional[float]
         Discharge coefficient.
     """
-    statics : Optional[bool] = Field(None, description="If true calculate static properties")
+
+    statics: Optional[bool] = Field(None, description="If true calculate static properties")
     mn: Optional[float] = Field(None, description="Mach number")
     nozz_type: Optional[str] = Field(None, description="Type of nozzle")
     loss_coef: Optional[str] = Field(None, description="Loss coefficient")
     cv: Optional[float] = Field(None, description="Discharge coefficient")
     area: Optional[float] = Field(None, description="Frontal area of component")
-
-
-
 
 
 class Performance(EngineElement):
@@ -302,10 +303,6 @@ class Performance(EngineElement):
 
     Attributes
     ----------
-    num_nozzles : Optional[int]
-        Number of nozzles.
-    num_burners : Optional[int]
-        Number of burners.
     pt2 : Optional[float]
         Total pressure at station 2.
     pt3 : Optional[float]
@@ -326,13 +323,18 @@ class Performance(EngineElement):
         Thrust specific fuel consumption.
     """
 
-    num_nozzles: Optional[int] = Field(None, description="Number of nozzles")
-    num_burners: Optional[int] = Field(None, description="Number of burners")
+    name: Optional[str] = Field(None, description="Name of the performance component")
+    pt2_source: Optional[str] = Field(None, description="Name of component to get Pt2 from")
     pt2: Optional[float] = Field(None, description="Total pressure at station 2")
+    pt3_source: Optional[str] = Field(None, description="Name of component to get Pt3 from")
     pt3: Optional[float] = Field(None, description="Total pressure at station 3")
+    wfuel_0_source: Optional[str] = Field(None, description="Name of component to get wfuel from")
     wfuel_0: Optional[float] = Field(None, description="Fuel flow rate")
+    ram_drag_source: Optional[str] = Field(None, description="Name of component to get ram drag from")
     ram_drag: Optional[float] = Field(None, description="Ram drag")
+    fg_0_source: Optional[str] = Field(None, description="Name of core nozzle component to get fg_0 from")
     fg_0: Optional[float] = Field(None, description="Gross thrust from core nozzle")
+    fg_1_source: Optional[str] = Field(None, description="Name of bypass nozzle component to get fg_1 from")
     fg_1: Optional[float] = Field(None, description="Gross thrust from bypass nozzle")
     fn: Optional[float] = Field(None, description="Net thrust")
     opr: Optional[float] = Field(None, description="Overall pressure ratio")
@@ -364,6 +366,9 @@ class PropulsionCycle(CommonBaseModel):
     balance_components: Optional[List[BalanceComponent]] = Field(
         None, description="The list of balance components in the engine cycle."
     )
+    performance_components: Optional[List[Performance]] = Field(
+        None, description="The list of the performance components for the cycle."
+    )
     global_connections: Optional[List[str]] = Field(None, description="The global connections in the engine cycle.")
     flow_connections: Optional[List[List[str]]] = Field(None, description="The flow connections in the engine cycle.")
     solver_settings: Optional[dict] = Field(None, description="The solver settings for the engine cycle.")
@@ -374,7 +379,7 @@ class PropulsionCycle(CommonBaseModel):
         if v not in allowed_methods:
             raise ValueError(f"Thermodynamic method must be one of {allowed_methods}")
         return v
-    
+
     @field_validator("throttle_mode")
     def validate_throttle_mode(cls, v):
         allowed_methods = ["T4", "percent_throttle"]
