@@ -122,17 +122,17 @@ class Compressor(EngineElement):
         Design condition efficeincy
     """
 
-    area: Optional[float] = Field(None, description="Frontal area of component")
+    area: Optional[List[float]] = Field(None, description="Off-design area of component")
     s_PR: Optional[float] = Field(None, description="Design Pressure Ratio")
     s_Wc: Optional[float] = Field(None, description="Design mass flow rate")
     s_eff: Optional[float] = Field(None, description="Design efficiency")
-    PR: Optional[float] = Field(None, description="Off-design Pressure Ratio")
-    Wc: Optional[float] = Field(None, description="Off-design mass flow rate")
-    eff_poly: Optional[float] = Field(None, description="Off-design efficinecy")
-    Nc: Optional[float] = Field(None, description="Nc")
-    Power: Optional[float] = Field(None, description="Engine Power")
-    Rlinemap: Optional[float] = Field(None, description="Surge Line Map")
-    Nc_map: Optional[float] = Field(None, description="N map")
+    PR: Optional[List[float]] = Field(None, description="Off-design Pressure Ratio")
+    Wc: Optional[List[float]] = Field(None, description="Off-design mass flow rate")
+    eff_poly: Optional[List[float]] = Field(None, description="Off-design efficinecy")
+    Nc: Optional[List[float]] = Field(None, description="Nc")
+    Power: Optional[List[float]] = Field(None, description="Engine Power")
+    Rlinemap: Optional[List[float]] = Field(None, description="Surge Line Map")
+    NcMap: Optional[List[float]] = Field(None, description="Nc map")
 
 
 class Splitter(EngineElement):
@@ -153,12 +153,11 @@ class Splitter(EngineElement):
         Area for the second flow path.
     """
 
-    statics: Optional[bool] = Field(None, description="If true calculate static properties")
-    bpr: Optional[float] = Field(None, description="Bypass ratio")
-    mn1: Optional[float] = Field(None, description="Mach number for the first flow path")
-    mn2: Optional[float] = Field(None, description="Mach number for the second flow path")
-    area1: Optional[float] = Field(None, description="Frontal area for the first flow path")
-    area2: Optional[float] = Field(None, description="Frontal area for the second flow path")
+    bpr: Optional[List[float]] = Field(None, description="Off-design Bypass ratio")
+    mn1: Optional[List[float]] = Field(None, description="Off-design Mach number for the first flow path")
+    mn2: Optional[List[float]] = Field(None, description="Off-design Mach number for the second flow path")
+    area1: Optional[List[float]] = Field(None, description="Off-design Frontal area for the first flow path")
+    area2: Optional[List[float]] = Field(None, description="Off-design Frontal area for the second flow path")
 
 
 class Duct(EngineElement):
@@ -170,13 +169,14 @@ class Duct(EngineElement):
     mn : Optional[float]
         Mach number.
     dp_qp : Optional[float]
-        Pressure drop ratio.
+        Design pressure loss.
     """
 
-    statics: Optional[bool] = Field(None, description="If true calculate static properties")
-    mn: Optional[float] = Field(None, description="Mach number")
-    dPqP: Optional[float] = Field(None, description="Pressure drop ratio")
-    Q_dot: Optional[float] = Field(None, description="heat flow rate into (positive) or out of (negative) the air")
+    s_dPqP: Optional[float] = Field(None, description="Design pressure loss")
+    dPqP: Optional[List[float]] = Field(None, description="Off-design design pressure loss")
+    Q_dot: Optional[float] = Field(
+        None, description="Off-design Heat flow rate into (positive) or out of (negative) the air"
+    )
     area: Optional[float] = Field(None, description="Frontal area of component")
 
 
