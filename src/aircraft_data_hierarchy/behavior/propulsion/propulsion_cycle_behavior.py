@@ -122,16 +122,17 @@ class Compressor(EngineElement):
         Design condition efficeincy
     """
 
-    mn: Optional[float] = Field(None, description="Mach number")
-    statics: Optional[bool] = Field(None, description="If true calculate static properties")
-    map_data: Optional[str] = Field(None, description="Map data for the compressor")
-    map_extrap: Optional[bool] = Field(None, description="Flag to indicate if map extrapolation is used")
-    map_interp_method: Optional[str] = Field(None, description="Method to use for map interpolation.")
-    alpha_map: Optional[str] = Field(None, description="Alpha Map")
-    bleed_names: Optional[List[str]] = Field(None, description="Names of the bleed ports")
-    pr_des: Optional[float] = Field(None, description="Design condition pressure ratio")
-    eff_des: Optional[float] = Field(None, description="Design condition efficeincy")
     area: Optional[float] = Field(None, description="Frontal area of component")
+    s_PR: Optional[float] = Field(None, description="Design Pressure Ratio")
+    s_Wc: Optional[float] = Field(None, description="Design mass flow rate")
+    s_eff: Optional[float] = Field(None, description="Design efficiency")
+    PR: Optional[float] = Field(None, description="Off-design Pressure Ratio")
+    Wc: Optional[float] = Field(None, description="Off-design mass flow rate")
+    eff_poly: Optional[float] = Field(None, description="Off-design efficinecy")
+    Nc: Optional[float] = Field(None, description="Nc")
+    Power: Optional[float] = Field(None, description="Engine Power")
+    Rlinemap: Optional[float] = Field(None, description="Surge Line Map")
+    Nc_map: Optional[float] = Field(None, description="N map")
 
 
 class Splitter(EngineElement):
