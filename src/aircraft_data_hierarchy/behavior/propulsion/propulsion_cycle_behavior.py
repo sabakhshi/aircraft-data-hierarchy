@@ -50,20 +50,7 @@ class Bleed(EngineElement):
     statics: Optional[bool] = Field(None, description="If true calculate static properties")
 
 
-class OffDesignPoint(CommonBaseModel):
-    """
-    Represents an off-design point in a multi-point cycle analysis.
-
-    Attributes:
-        name (str): The name of the off-design point.
-        parameters (dict): The parameter values for the off-design point.
-    """
-
-    name: str = Field(..., description="The name of the off-design point.")
-    parameters: dict = Field(..., description="The parameter values for the off-design point.")
-
-
-class FlightConditions(CommonBaseModel):
+class FlightConditions(Behavior):
     """
     Flight conditions for the engine.
 
@@ -79,7 +66,6 @@ class FlightConditions(CommonBaseModel):
         Air mass flow rate.
     """
 
-    name: Optional[str] = Field(None, description="Name of flight conditions.")
     mn: Optional[List[float]] = Field(None, description="Mach number")
     alt: Optional[List[float]] = Field(None, description="Altitude in feet")
     d_ts: Optional[float] = Field(None, description="Temperature deviation in degrees Rankine")
@@ -307,9 +293,9 @@ class Performance(EngineElement):
     tsfc: Optional[float] = Field(None, description="Thrust specific fuel consumption")
 
 
-class PropulsionCycle(CommonBaseModel):
+class PropulsionCycle(Behavior):
     """
-    Represents a complete engine cycle.
+    Contains the analysis inputs and Engine Deck for a propulsion cycle analysis.
 
     Attributes:
         name (str): The name of the engine cycle.
@@ -323,20 +309,14 @@ class PropulsionCycle(CommonBaseModel):
         solver_settings (dict, optional): The solver settings for the engine cycle.
     """
 
-    name: str = Field(..., description="The name of the engine cycle.")
+    name: str = Field(..., description="The name of the engine cycle analysis.")
     design: bool = Field(..., description="Whether the engine cycle is in design mode.")
     thermo_method: str = Field("TABULAR", description="The thermodynamic method used in the engine cycle.")
     thermo_data: Optional[str] = Field(None, description="The thermodynamic data used in the engine cycle.")
     throttle_mode: str = Field("T4", description="What quanity should be used to throttle engine for off-design cases.")
-    elements: List[EngineElement] = Field(..., description="The list of engine elements in the engine cycle.")
-    balance_components: Optional[List[BalanceComponent]] = Field(
-        None, description="The list of balance components in the engine cycle."
-    )
     performance_components: Optional[List[Performance]] = Field(
         None, description="The list of the performance components for the cycle."
     )
-    global_connections: Optional[List[str]] = Field(None, description="The global connections in the engine cycle.")
-    flow_connections: Optional[List[List[str]]] = Field(None, description="The flow connections in the engine cycle.")
     solver_settings: Optional[dict] = Field(None, description="The solver settings for the engine cycle.")
 
     @field_validator("thermo_method")
@@ -352,6 +332,19 @@ class PropulsionCycle(CommonBaseModel):
         if v not in allowed_methods:
             raise ValueError(f"Throttle mode must be one of {allowed_methods}")
         return v
+
+
+class OffDesignPoint(CommonBaseModel):
+    """
+    Represents an off-design point in a multi-point cycle analysis.
+
+    Attributes:
+        name (str): The name of the off-design point.
+        parameters (dict): The parameter values for the off-design point.
+    """
+
+    name: str = Field(..., description="The name of the off-design point.")
+    parameters: dict = Field(..., description="The parameter values for the off-design point.")
 
 
 class MultiPointCycle(CommonBaseModel):
