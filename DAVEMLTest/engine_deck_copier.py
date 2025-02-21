@@ -104,11 +104,11 @@ def parse_deck_file_to_json(input_deck_path, output_json_path):
         })
     
     # --- Build Function Section ---
-    # Mach Number ("mn") and Altitude ("alt") are the independent variables.
+    # Mach Number ("mn"), Alt ("alt"), and Throttle are the independent variables.
     independent_vars = []
     dependent_vars = []
     for alias in alias_list:
-        if alias in ["mn", "alt"]:
+        if alias in ["mn", "alt", "throttle", "hybrid_throttle"]:
             independent_vars.append({
                 "var_id": alias,
                 "min": None,

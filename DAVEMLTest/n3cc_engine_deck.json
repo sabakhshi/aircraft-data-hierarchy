@@ -2490,12 +2490,16 @@
                     "max": null,
                     "extrapolate": null,
                     "interpolate": null
+                },
+                {
+                    "var_id": "throttle",
+                    "min": null,
+                    "max": null,
+                    "extrapolate": null,
+                    "interpolate": null
                 }
             ],
             "dependent_var_ref": [
-                {
-                    "var_id": "throttle"
-                },
                 {
                     "var_id": "gross_thrust"
                 },
